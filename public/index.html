@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Gallery - Bhedetar Tour 2082</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    .skeleton {
+      animation: skeleton-loading 1s linear infinite alternate;
+    }
+    
+    @keyframes skeleton-loading {
+      0% { background-color: hsl(200, 20%, 80%); }
+      100% { background-color: hsl(200, 20%, 95%); }
+    }
+    
+    .media-item {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .media-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    
+    .video-overlay {
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+    }
+    
+    .badge {
+      backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .eye-button {
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .media-item:hover .eye-button {
+      opacity: 1;
+    }
+
+    /* Reel Modal Styles */
+    .reel-modal {
+      touch-action: pan-y;
+    }
+
+    .reel-content {
+      transition: transform 0.3s ease-out;
+    }
+
+    .nav-button {
+      transition: all 0.2s;
+    }
+
+    .nav-button:hover {
+      transform: scale(1.1);
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .nav-button:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-md sticky top-0 z-40">
+    <div class="container mx-auto px-4 py-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-images text-blue-600"></i> Bhedetar Tour 2082
+          </h1>
+          <p class="text-gray-600 text-sm mt-1">
+            <span id="totalCount">Loading...</span>
+          </p>
+        </div>
+        
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="filterMedia('all')" id="filterAll" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+            <i class="fas fa-th"></i> All
+          </button>
+          <button onclick="filterMedia('image')" id="filterImages" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition">
+            <i class="fas fa-image"></i> Photos
+          </button>
+          <button onclick="filterMedia('video')" id="filterVideos" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition">
+            <i class="fas fa-video"></i> Videos
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-8">
+    <!-- Loading State -->
+    <div id="loadingState" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div class="skeleton rounded-lg h-64"></div>
+      <div class="skeleton rounded-lg h-64"></div>
+      <div class="skeleton rounded-lg h-64"></div>
+      <div class="skeleton rounded-lg h-64"></div>
+      <div class="skeleton rounded-lg h-64"></div>
+      <div class="skeleton rounded-lg h-64"></div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="hidden text-center py-12">
+      <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Oops! Something went wrong</h2>
+      <p class="text-gray-600 mb-4">Failed to load media files</p>
+      <button onclick="loadFiles()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+        <i class="fas fa-redo"></i> Try Again
+      </button>
+    </div>
+
+    <!-- Gallery Grid -->
+    <div id="gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 hidden"></div>
+
+    <!-- Loading More Indicator -->
+    <div id="loadingMore" class="hidden text-center py-8">
+      <div class="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-lg shadow-md">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        <span class="text-gray-700 font-medium">Loading more...</span>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-12">
+      <i class="fas fa-folder-open text-6xl text-gray-400 mb-4"></i>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">No media found</h2>
+      <p class="text-gray-600">Try changing your filter</p>
+    </div>
+  </main>
+
+  <!-- Reel Modal -->
+  <div id="reelModal" class="fixed inset-0 bg-black z-50 hidden reel-modal">
+    <div class="relative w-full h-full flex items-center justify-center">
+      <!-- Close Button -->
+      <button onclick="closeReelModal()" class="absolute top-4 right-4 z-50 text-white text-3xl hover:text-gray-300 transition bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <!-- Counter -->
+      <div class="absolute top-4 left-4 z-50 text-white bg-black bg-opacity-50 px-4 py-2 rounded-lg">
+        <span id="reelCounter">1 / 1</span>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <button onclick="navigateReel(-1)" class="nav-button absolute left-4 top-1/2 -translate-y-1/2 z-50 text-white text-4xl bg-black bg-opacity-50 rounded-full w-14 h-14 flex items-center justify-center">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      
+      <button onclick="navigateReel(1)" class="nav-button absolute right-4 top-1/2 -translate-y-1/2 z-50 text-white text-4xl bg-black bg-opacity-50 rounded-full w-14 h-14 flex items-center justify-center">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+
+      <!-- Content Container -->
+      <div id="reelContent" class="w-full h-full flex items-center justify-center p-4 reel-content">
+        <!-- Content will be injected here -->
+      </div>
+
+      <!-- File Info -->
+      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 text-white bg-black bg-opacity-70 px-6 py-3 rounded-lg max-w-2xl text-center">
+        <p id="reelFileName" class="text-lg font-medium truncate"></p>
+        <div class="flex gap-4 justify-center mt-2 flex-wrap items-center">
+          <!-- Quality Selector for Videos -->
+          <div id="qualitySelector" class="hidden">
+            <label class="text-sm mr-2">Quality:</label>
+            <select id="qualitySelect" onchange="changeVideoQuality()" class="bg-gray-800 text-white px-3 py-1 rounded border border-gray-600">
+              <option value="720p">720p (Fast)</option>
+              <option value="1080p">1080p (HD)</option>
+              <option value="4k">4K (Original)</option>
+            </select>
+          </div>
+          <a id="reelDownload" href="" download class="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition">
+            <i class="fas fa-download"></i> Download
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allFiles = [];
+    let currentFilter = 'all';
+    let currentPage = 1;
+    let isLoading = false;
+    let hasMore = true;
+    let totalCount = { images: 0, videos: 0, total: 0 };
+    let currentReelIndex = 0;
+    let reelFiles = [];
+    let touchStartY = 0;
+    let touchEndY = 0;
+    let currentVideoQuality = '720p'; // Default to 720p for faster loading
+
+    async function loadFiles(reset = false) {
+      if (isLoading || (!hasMore && !reset)) return;
+
+      const loadingState = document.getElementById('loadingState');
+      const loadingMore = document.getElementById('loadingMore');
+      const errorState = document.getElementById('errorState');
+      const gallery = document.getElementById('gallery');
+
+      if (reset) {
+        currentPage = 1;
+        allFiles = [];
+        hasMore = true;
+        gallery.innerHTML = '';
+      }
+
+      // Show appropriate loading indicator
+      if (currentPage === 1) {
+        loadingState.classList.remove('hidden');
+        gallery.classList.add('hidden');
+      } else {
+        loadingMore.classList.remove('hidden');
+      }
+      
+      errorState.classList.add('hidden');
+      isLoading = true;
+
+      try {
+        const res = await fetch(`/files?page=${currentPage}&limit=20&filter=${currentFilter}`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        
+        const data = await res.json();
+        
+        // Update total counts only on first page
+        if (currentPage === 1) {
+          totalCount.total = data.pagination.total;
+        }
+        
+        allFiles = [...allFiles, ...data.files];
+        hasMore = data.pagination.hasMore;
+        
+        loadingState.classList.add('hidden');
+        loadingMore.classList.add('hidden');
+        gallery.classList.remove('hidden');
+        
+        renderNewFiles(data.files);
+        updateStats();
+        
+        // Increment page AFTER successful processing
+        currentPage++;
+        
+      } catch (error) {
+        console.error('Error loading files:', error);
+        loadingState.classList.add('hidden');
+        loadingMore.classList.add('hidden');
+        
+        // Only show error state if we have no files loaded
+        if (allFiles.length === 0) {
+          errorState.classList.remove('hidden');
+          gallery.classList.add('hidden');
+        }
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    function renderNewFiles(files) {
+      const gallery = document.getElementById('gallery');
+      const emptyState = document.getElementById('emptyState');
+      
+      if (allFiles.length === 0) {
+        gallery.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      gallery.classList.remove('hidden');
+
+      // Track how many files we're adding
+      const startIndex = allFiles.length - files.length;
+
+      files.forEach((file, index) => {
+        const el = document.createElement('div');
+        el.className = "relative media-item rounded-lg overflow-hidden shadow-lg bg-white";
+        el.setAttribute('data-file-name', file.name); // Add unique identifier
+        
+        const isVideo = file.type === 'video';
+        const fileSize = formatFileSize(file.size);
+        const ext = file.name.split('.').pop().toUpperCase();
+        const globalIndex = startIndex + index;
+
+        if (isVideo) {
+          el.innerHTML = `
+            <div class="relative group">
+              <div class="cursor-pointer" onclick="openReelModal(${globalIndex})">
+                <img src="/video-placeholder.svg" class="w-full h-64 object-cover" alt="Video thumbnail" />
+                <div class="absolute inset-0 video-overlay flex items-center justify-center">
+                  <div class="bg-white bg-opacity-90 rounded-full p-4 transform group-hover:scale-110 transition">
+                    <i class="fas fa-play text-3xl text-blue-600"></i>
+                  </div>
+                </div>
+              </div>
+              <button onclick="openReelModal(${globalIndex})" class="eye-button absolute top-2 right-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition shadow-lg">
+                <i class="fas fa-eye"></i>
+              </button>
+              <div class="absolute top-2 left-2 badge text-white text-xs px-2 py-1 rounded">
+                <i class="fas fa-video"></i> ${ext}
+              </div>
+              <div class="absolute bottom-2 left-2 badge text-white text-xs px-2 py-1 rounded">
+                ${fileSize}
+              </div>
+            </div>
+            <div class="p-2 flex justify-between items-center">
+              <span class="text-xs text-gray-600 truncate flex-1" title="${file.name}">${file.name}</span>
+              <a href="/media/${encodeURIComponent(file.name)}" download class="text-blue-600 hover:text-blue-800 ml-2">
+                <i class="fas fa-download"></i>
+              </a>
+            </div>
+          `;
+        } else {
+          el.innerHTML = `
+            <div class="relative group">
+              <div class="cursor-pointer" onclick="openReelModal(${globalIndex})">
+                <img src="/thumbnail/${encodeURIComponent(file.name)}" 
+                     class="w-full h-64 object-cover" 
+                     alt="${file.name}"
+                     loading="lazy"
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22%3EImage Error%3C/text%3E%3C/svg%3E'" />
+                <div class="absolute top-2 left-2 badge text-white text-xs px-2 py-1 rounded">
+                  <i class="fas fa-image"></i> ${ext}
+                </div>
+                <div class="absolute bottom-2 left-2 badge text-white text-xs px-2 py-1 rounded">
+                  ${fileSize}
+                </div>
+              </div>
+              <button onclick="openReelModal(${globalIndex})" class="eye-button absolute top-2 right-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition shadow-lg">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+            <div class="p-2 flex justify-between items-center">
+              <span class="text-xs text-gray-600 truncate flex-1" title="${file.name}">${file.name}</span>
+              <a href="/media/${encodeURIComponent(file.name)}" download class="text-blue-600 hover:text-blue-800 ml-2">
+                <i class="fas fa-download"></i>
+              </a>
+            </div>
+          `;
+        }
+        gallery.appendChild(el);
+      });
+    }
+
+    function filterMedia(type) {
+      if (currentFilter === type) return; // Don't reload if already on this filter
+      
+      currentFilter = type;
+      
+      // Update button styles
+      document.getElementById('filterAll').className = type === 'all' 
+        ? 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition'
+        : 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition';
+      
+      document.getElementById('filterImages').className = type === 'image'
+        ? 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition'
+        : 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition';
+      
+      document.getElementById('filterVideos').className = type === 'video'
+        ? 'px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition'
+        : 'px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300 transition';
+
+      // Reset and reload with new filter
+      currentPage = 1;
+      allFiles = [];
+      hasMore = true;
+      document.getElementById('gallery').innerHTML = '';
+      
+      loadFiles(true);
+    }
+
+    function updateStats() {
+      let text = '';
+      if (currentFilter === 'all') {
+        text = `${totalCount.total} items total`;
+      } else if (currentFilter === 'image') {
+        text = `${totalCount.total} photos`;
+      } else if (currentFilter === 'video') {
+        text = `${totalCount.total} videos`;
+      }
+      
+      if (hasMore) {
+        text += ` (showing ${allFiles.length})`;
+      }
+      
+      document.getElementById('totalCount').textContent = text;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    // Infinite scroll
+    function handleScroll() {
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const pageHeight = document.documentElement.scrollHeight;
+      
+      // Load more when user is 500px from bottom
+      if (scrollPosition >= pageHeight - 500 && hasMore && !isLoading) {
+        loadFiles(false);
+      }
+    }
+
+    // Debounce scroll event
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(handleScroll, 100);
+    });
+
+    // Load files on page load
+    loadFiles(true);
+
+    // Reel Modal Functions
+    function openReelModal(index) {
+      reelFiles = [...allFiles];
+      currentReelIndex = index;
+      
+      const modal = document.getElementById('reelModal');
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      
+      displayReelItem(currentReelIndex);
+      setupReelControls();
+    }
+
+    function closeReelModal() {
+      const modal = document.getElementById('reelModal');
+      modal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      
+      // Stop and cleanup any playing video
+      const video = document.querySelector('#reelContent video');
+      if (video) {
+        video.pause();
+        video.src = ''; // Clear source to stop downloads
+        video.load(); // Force cleanup
+      }
+    }
+
+    function displayReelItem(index) {
+      if (index < 0 || index >= reelFiles.length) return;
+      
+      const file = reelFiles[index];
+      const content = document.getElementById('reelContent');
+      const counter = document.getElementById('reelCounter');
+      const fileName = document.getElementById('reelFileName');
+      const download = document.getElementById('reelDownload');
+      const qualitySelector = document.getElementById('qualitySelector');
+      const qualitySelect = document.getElementById('qualitySelect');
+      
+      // Update counter and info
+      counter.textContent = `${index + 1} / ${reelFiles.length}`;
+      fileName.textContent = file.name;
+      download.href = `/media/${encodeURIComponent(file.name)}`;
+      download.download = file.name;
+      
+      // Display content
+      if (file.type === 'video') {
+        // Show quality selector for videos
+        qualitySelector.classList.remove('hidden');
+        qualitySelect.value = currentVideoQuality;
+        
+        const videoUrl = `/media/${encodeURIComponent(file.name)}?quality=${currentVideoQuality}`;
+        
+        content.innerHTML = `
+          <div class="relative w-full max-w-6xl">
+            <div class="relative">
+              <video id="reelVideo"
+                     class="w-full max-h-[85vh] rounded-lg shadow-2xl bg-black" 
+                     controls 
+                     preload="auto"
+                     playsinline>
+                Your browser does not support the video tag.
+              </video>
+              <div id="videoLoader" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg pointer-events-none">
+                <div class="text-center">
+                  <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto"></div>
+                  <p class="text-white mt-4 font-medium">Loading ${currentVideoQuality} video...</p>
+                  <p id="bufferProgress" class="text-white text-sm mt-2 opacity-75"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Handle video loading events
+        const video = document.getElementById('reelVideo');
+        const loader = document.getElementById('videoLoader');
+        const bufferProgress = document.getElementById('bufferProgress');
+        
+        // Set source after player is ready
+        setTimeout(() => {
+          video.src = videoUrl;
+          video.load();
+        }, 100);
+        
+        // Show buffering progress
+        video.addEventListener('progress', () => {
+          if (video.buffered.length > 0) {
+            const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+            const duration = video.duration;
+            if (duration > 0) {
+              const percent = Math.floor((bufferedEnd / duration) * 100);
+              bufferProgress.textContent = `Buffered: ${percent}%`;
+            }
+          }
+        });
+        
+        video.addEventListener('loadedmetadata', () => {
+          console.log('Video metadata loaded');
+        });
+        
+        video.addEventListener('canplay', () => {
+          loader.style.display = 'none';
+          // Try to play
+          video.play().catch(e => {
+            console.log('Autoplay prevented, user interaction required');
+          });
+        });
+        
+        video.addEventListener('waiting', () => {
+          loader.style.display = 'flex';
+        });
+        
+        video.addEventListener('playing', () => {
+          loader.style.display = 'none';
+        });
+        
+        video.addEventListener('stalled', () => {
+          console.log('Video stalled, rebuffering...');
+        });
+        
+        video.addEventListener('error', (e) => {
+          // Ignore errors from clearing the src (cleanup operation)
+          if (!e.target.src || e.target.src === window.location.href) {
+            return;
+          }
+          console.error('Video error:', e.target.error);
+          loader.innerHTML = `
+            <div class="text-center text-white">
+              <i class="fas fa-exclamation-triangle text-6xl mb-4"></i>
+              <p class="text-xl">Failed to load video</p>
+              <p class="text-sm mt-2 opacity-75">${e.target.error?.message || 'Try changing quality or reload'}</p>
+              <button onclick="displayReelItem(${index})" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition">
+                Retry
+              </button>
+            </div>
+          `;
+        });
+      } else {
+        // Hide quality selector for images
+        qualitySelector.classList.add('hidden');
+        
+        content.innerHTML = `
+          <div class="relative w-full max-w-6xl">
+            <div class="relative">
+              <img id="reelImage"
+                   src="/media/${encodeURIComponent(file.name)}" 
+                   class="w-full max-h-[85vh] rounded-lg shadow-2xl object-contain bg-black" 
+                   alt="${file.name}" />
+              <div id="imageLoader" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-white"></div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Handle image loading
+        const image = document.getElementById('reelImage');
+        const loader = document.getElementById('imageLoader');
+        
+        image.addEventListener('load', () => {
+          loader.style.display = 'none';
+        });
+        
+        image.addEventListener('error', () => {
+          loader.innerHTML = `
+            <div class="text-center text-white">
+              <i class="fas fa-exclamation-triangle text-6xl mb-4"></i>
+              <p class="text-xl">Failed to load image</p>
+              <button onclick="displayReelItem(${index})" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition">
+                Retry
+              </button>
+            </div>
+          `;
+        });
+      }
+    }
+
+    function changeVideoQuality() {
+      const qualitySelect = document.getElementById('qualitySelect');
+      const newQuality = qualitySelect.value;
+      
+      // Get current video element
+      const oldVideo = document.getElementById('reelVideo');
+      let currentTime = 0;
+      let wasPlaying = false;
+      
+      if (oldVideo) {
+        currentTime = oldVideo.currentTime || 0;
+        wasPlaying = !oldVideo.paused;
+        
+        // Stop the old video and clean up
+        oldVideo.pause();
+        oldVideo.src = ''; // Clear source to stop downloading
+        oldVideo.load(); // Force cleanup
+      }
+      
+      // Update quality
+      currentVideoQuality = newQuality;
+      
+      // Reload video with new quality
+      displayReelItem(currentReelIndex);
+      
+      // Restore playback position
+      setTimeout(() => {
+        const newVideo = document.getElementById('reelVideo');
+        if (newVideo) {
+          newVideo.currentTime = currentTime;
+          
+          // Auto-play if it was playing before
+          if (wasPlaying || currentTime === 0) {
+            newVideo.play().catch(e => {
+              console.log('Autoplay after quality change prevented:', e);
+            });
+          }
+        }
+      }, 500);
+    }
+
+    function navigateReel(direction) {
+      // Stop and cleanup current video if playing
+      const video = document.querySelector('#reelContent video');
+      if (video) {
+        video.pause();
+        video.src = ''; // Clear source to stop any ongoing downloads
+        video.load(); // Force cleanup
+      }
+      
+      currentReelIndex += direction;
+      
+      // Loop around
+      if (currentReelIndex < 0) {
+        currentReelIndex = reelFiles.length - 1;
+      } else if (currentReelIndex >= reelFiles.length) {
+        currentReelIndex = 0;
+      }
+      
+      displayReelItem(currentReelIndex);
+    }
+
+    function setupReelControls() {
+      const modal = document.getElementById('reelModal');
+      
+      // Keyboard navigation
+      const keyHandler = (e) => {
+        if (!modal.classList.contains('hidden')) {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            navigateReel(1);
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            navigateReel(-1);
+          } else if (e.key === 'Escape') {
+            closeReelModal();
+          }
+        }
+      };
+      
+      document.removeEventListener('keydown', keyHandler);
+      document.addEventListener('keydown', keyHandler);
+      
+      // Touch/Swipe support
+      modal.addEventListener('touchstart', (e) => {
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+      
+      modal.addEventListener('touchend', (e) => {
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+      }, { passive: true });
+      
+      // Mouse wheel support
+      modal.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaY) > 50) {
+          e.preventDefault();
+          if (e.deltaY > 0) {
+            navigateReel(1); // Scroll down = next
+          } else {
+            navigateReel(-1); // Scroll up = previous
+          }
+        }
+      }, { passive: false });
+    }
+
+    function handleSwipe() {
+      const swipeThreshold = 50;
+      const diff = touchStartY - touchEndY;
+      
+      if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+          // Swipe up = next
+          navigateReel(1);
+        } else {
+          // Swipe down = previous
+          navigateReel(-1);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
